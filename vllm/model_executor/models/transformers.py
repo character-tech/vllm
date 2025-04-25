@@ -261,9 +261,18 @@ class TransformersModel(nn.Module):
         num_kv_heads = self.model_config.get_num_kv_heads(self.parallel_config)
         start, end = get_pp_indices(self.config.num_hidden_layers,
                                     self.pp_rank, self.pp_size)
-        return {
-            i:
-            Attention(
+
+        attention_instances = {}
+        for i in range(start, end):
+            sliding_window = None
+            if hasattr(self.model_config,
+                       "global_attention_layer_schedule") and hasattr(
+                           self.model_config, "sliding_window_size"):
+                schedule = self.model_config.global_attention_layer_schedule
+                if i in schedule:
+                    sliding_window = self.model_config.sliding_window_size
+
+            attention_instances[i] = Attention(
                 num_heads=num_heads,
                 head_size=head_size,
                 # NOTE: We use Llama scale as default, if it's set by
@@ -272,9 +281,10 @@ class TransformersModel(nn.Module):
                 num_kv_heads=num_kv_heads,
                 cache_config=self.cache_config,
                 quant_config=self.quant_config,
+                per_layer_sliding_window=sliding_window,
                 prefix=f"{i}.attn")
-            for i in range(start, end)
-        }
+
+        return attention_instances
 
     def init_buffers(self, module: nn.Module):
         """
