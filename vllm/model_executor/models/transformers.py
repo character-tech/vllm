@@ -267,10 +267,10 @@ class TransformersModel(nn.Module):
             sliding_window = None
             if hasattr(self.model_config,
                        "global_attention_layer_schedule") and hasattr(
-                           self.model_config, "sliding_window_size"):
+                           self.model_config, "sliding_window"):
                 schedule = self.model_config.global_attention_layer_schedule
                 if i in schedule:
-                    sliding_window = self.model_config.sliding_window_size
+                    sliding_window = self.model_config.sliding_window
 
             attention_instances[i] = Attention(
                 num_heads=num_heads,
