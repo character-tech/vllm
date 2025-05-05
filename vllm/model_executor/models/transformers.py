@@ -263,15 +263,17 @@ class TransformersModel(nn.Module):
                                     self.pp_rank, self.pp_size)
 
         attention_instances = {}
+        if hasattr(self.config, "global_attention_layers") and isinstance(
+                self.config.global_attention_layers, list):
+            global_attention_layers = self.config.global_attention_layers
+        else:
+            global_attention_layers = None
+
         for i in range(start, end):
             sliding_window = None
-            if hasattr(self.model_config,
-                       "global_attention_layer_schedule") and hasattr(
-                           self.model_config, "sliding_window"):
-                schedule = self.model_config.global_attention_layer_schedule
-                if i in schedule:
-                    sliding_window = self.model_config.sliding_window
-
+            if i in global_attention_layers:
+                assert self.config.sliding_window is not None
+                sliding_window = self.config.sliding_window
             attention_instances[i] = Attention(
                 num_heads=num_heads,
                 head_size=head_size,
@@ -328,25 +330,6 @@ class TransformersModel(nn.Module):
         This means that:
         - `type(module)` is a class from `transformers`
         - This class is constructed using a `PretrainedConfig`
-        """
-        for name, param in module.named_parameters(recurse=False):
-            if param.device == torch.device("meta"):
-                new_param = nn.Parameter(
-                    torch.empty_like(param.data,
-                                     device=self.device_config.device))
-                setattr(module, name, new_param)
-        for child in module.children():
-            self.init_parameters(child)
-
-    def init_parameters(self, module: nn.Module):
-        """
-        If a `parameter` is on the `meta` device, then its parent
-        `module` is the original module created by:
-
-        ```python
-        with torch.device("meta"):
-            self.model: PreTrainedModel = AutoModel.from_config(...)
-        ```
         """
         for name, param in module.named_parameters(recurse=False):
             if param.device == torch.device("meta"):
