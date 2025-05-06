@@ -7,6 +7,16 @@ from typing import NamedTuple, Optional
 import torch
 
 
+class AdditionalHeadOutputsPerRequest(NamedTuple):
+    # num_additional_head_outputs
+    additional_head_outputs: list[float]
+
+
+class AdditionalHeadOutputs(NamedTuple):
+    # num_generated_tokens x num_additional_head_outputs
+    additional_head_outputs: list[Optional[AdditionalHeadOutputsPerRequest]]
+
+
 class LogprobsLists(NamedTuple):
 
     # [num_reqs, max_num_logprobs + 1]
