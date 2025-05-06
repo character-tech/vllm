@@ -14,6 +14,7 @@ from vllm.sampling_params import RequestOutputKind
 from vllm.transformers_utils.tokenizer import AnyTokenizer
 from vllm.transformers_utils.tokenizer_group import TokenizerGroup
 from vllm.v1.engine import EngineCoreOutput, EngineCoreRequest, FinishReason
+from vllm.v1.engine.additional_heads import AdditionalHeadsProcessor
 from vllm.v1.engine.detokenizer import IncrementalDetokenizer
 from vllm.v1.engine.logprobs import LogprobsProcessor
 from vllm.v1.engine.parallel_sampling import ParentRequest
@@ -103,6 +104,7 @@ class RequestState:
         self.prompt_token_ids = prompt_token_ids
         self.prompt_len = len(prompt_token_ids)
         self.logprobs_processor = logprobs_processor
+        self.additional_heads_processor = additional_heads_processor
         self.detokenizer = detokenizer
         self.max_tokens_param = max_tokens_param
         self.is_prefilling = True
@@ -254,11 +256,18 @@ class RequestState:
         if delta and logprobs:
             logprobs = logprobs[-len(token_ids):]
 
+        # Prepare additional heads, based on delta mode
+        additional_heads = (
+            self.additional_heads_processor.additional_head_outputs or None)
+        if delta and additional_heads:
+            additional_heads = additional_heads[-len(token_ids):]
+
         return CompletionOutput(
             index=self.request_index,
             text=text,
             token_ids=token_ids,
             logprobs=logprobs,
+            additional_heads=additional_heads,
             cumulative_logprob=self.logprobs_processor.cumulative_logprob,
             finish_reason=str(finish_reason) if finished else None,
             stop_reason=stop_reason if finished else None)
