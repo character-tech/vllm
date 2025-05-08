@@ -33,6 +33,8 @@ class StreamingParams(
         ge=StreamLimits.STREAM_N_MIN)] = (StreamDefaults.STREAM_N_DEFAULT)
 
     def __post_init__(self) -> None:
+        if self.stream_n is None:
+            self.stream_n = StreamDefaults.STREAM_N_DEFAULT
         if not isinstance(self.stream_n, int):
             raise StreamValidationError(
                 f"stream_n must be an integer, got {type(self.stream_n)}.")

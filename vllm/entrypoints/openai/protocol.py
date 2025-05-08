@@ -19,6 +19,7 @@ from vllm.logger import init_logger
 from vllm.pooling_params import PoolingParams
 from vllm.sampling_params import (BeamSearchParams, GuidedDecodingParams,
                                   RequestOutputKind, SamplingParams)
+from vllm.streaming_params import StreamingParams
 from vllm.sequence import Logprob
 from vllm.utils import random_uuid, resolve_obj_by_qualname
 
@@ -167,6 +168,7 @@ AnyResponseFormat = Union[ResponseFormat, StructuralTagResponseFormat]
 class StreamOptions(OpenAIBaseModel):
     include_usage: Optional[bool] = True
     continuous_usage_stats: Optional[bool] = False
+    stream_n: Optional[int] = 1
 
 
 class FunctionDefinition(OpenAIBaseModel):
@@ -546,6 +548,16 @@ class ChatCompletionRequest(OpenAIBaseModel):
                 else RequestOutputKind.FINAL_ONLY,
             guided_decoding=guided_decoding,
             logit_bias=self.logit_bias)
+
+    def to_streaming_params(
+        self,
+    ) -> StreamingParams:
+        stream_n = None
+        if self.stream_options is not None:
+            if self.stream_options.stream_n is not None:
+                stream_n = self.stream_options.stream_n
+        return StreamingParams(stream_n=stream_n)
+
 
     def _get_guided_json_from_tool(
             self) -> Optional[Union[str, dict, BaseModel]]:
@@ -965,6 +977,15 @@ class CompletionRequest(OpenAIBaseModel):
             guided_decoding=guided_decoding,
             logit_bias=self.logit_bias,
             allowed_token_ids=self.allowed_token_ids)
+
+    def to_streaming_params(
+        self,
+    ) -> StreamingParams:
+        stream_n = None
+        if self.stream_options is not None:
+            if self.stream_options.stream_n is not None:
+                stream_n = self.stream_options.stream_n
+        return StreamingParams(stream_n=stream_n)
 
     @model_validator(mode="before")
     @classmethod
@@ -1717,6 +1738,11 @@ class TranscriptionRequest(OpenAIBaseModel):
                                             output_kind=RequestOutputKind.DELTA
                                             if self.stream \
                                             else RequestOutputKind.FINAL_ONLY)
+    
+    def to_streaming_params(
+        self,
+    ) -> StreamingParams: # stream_options not defined in transcription request
+        return StreamingParams(stream_n=None)
 
     @model_validator(mode="before")
     @classmethod

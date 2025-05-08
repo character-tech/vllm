@@ -32,6 +32,7 @@ from vllm.outputs import PoolingRequestOutput, RequestOutput
 from vllm.pooling_params import PoolingParams
 from vllm.prompt_adapter.request import PromptAdapterRequest
 from vllm.sampling_params import SamplingParams
+from vllm.streaming_params import StreamingParams
 from vllm.sequence import ExecuteModelRequest
 from vllm.transformers_utils.tokenizer import AnyTokenizer
 from vllm.usage.usage_lib import UsageContext
@@ -968,6 +969,7 @@ class AsyncLLMEngine(EngineClient):
         self,
         prompt: PromptType,
         sampling_params: SamplingParams,
+        streaming_params: StreamingParams,
         request_id: str,
         lora_request: Optional[LoRARequest] = None,
         trace_headers: Optional[Mapping[str, str]] = None,
@@ -1041,6 +1043,8 @@ class AsyncLLMEngine(EngineClient):
             >>> ...
         """
         try:
+            buffer: Optional[RequestOutput] = None # buffer of output tokens
+            buffer_token_count = 0
             async for output in await self.add_request(
                     request_id,
                     prompt,
@@ -1050,7 +1054,18 @@ class AsyncLLMEngine(EngineClient):
                     prompt_adapter_request=prompt_adapter_request,
                     priority=priority,
             ):
-                yield LLMEngine.validate_output(output, RequestOutput)
+                output = LLMEngine.validate_output(output, RequestOutput)
+                if buffer is None:
+                    buffer = output
+                else:
+                    buffer.add(output, aggregate = True)
+                
+                buffer_token_count += sum(len(o.token_ids) for o in output.outputs)
+                if buffer_token_count >= streaming_params.stream_n or finished:
+                    yield buffer
+                    buffer = None
+                    buffer_token_count = 0
+
         except asyncio.CancelledError:
             await self.abort(request_id)
             raise
