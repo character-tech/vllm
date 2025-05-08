@@ -361,9 +361,11 @@ class Fp8LinearOp:
                     num_token_padding=self.output_padding,
                     use_per_token_if_dynamic=use_per_token_if_dynamic)
             else:
-                # qinput, x_scale = input_2d, input_scale
-                qinput = input_2d
-                x_scale = torch.tensor([1.0], dtype=torch.float32, device=input_2d.device)
+                if x_scale is not None:
+                    qinput, x_scale = input_2d, input_scale
+                else:
+                    qinput = input_2d
+                    x_scale = torch.tensor([1.0], dtype=torch.float32, device=input_2d.device)
 
         per_tensor_weights = (weight_scale.numel() == 1)
         per_tensor_activations = (x_scale.numel() == 1)
