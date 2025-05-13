@@ -73,7 +73,8 @@ async def generate(
     )
     async for out in engine.generate(request_id=request_id,
                                      prompt=prompt,
-                                     sampling_params=sampling_params):
+                                     sampling_params=sampling_params,
+                                     streaming_params=streaming_params):
 
         num_tokens = sum(len(output.token_ids) for output in out.outputs)
         if output_kind == RequestOutputKind.DELTA:
@@ -244,7 +245,8 @@ async def test_finished_flag(
             out
             async for out in engine.generate(request_id="request-33",
                                              prompt=prompt,
-                                             sampling_params=sampling_params)
+                                             sampling_params=sampling_params,
+                                             streaming_params=streaming_params)
         ]
 
         # Assert only the last output has the finished flag set
