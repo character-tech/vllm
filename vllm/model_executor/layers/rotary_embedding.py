@@ -28,9 +28,13 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 from transformers import PretrainedConfig
+from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS
 
 from vllm.model_executor.custom_op import CustomOp
 from vllm.platforms import current_platform
+
+if current_platform.is_cuda():
+    from vllm.vllm_flash_attn.layers.rotary import apply_rotary_emb
 
 
 def _rotate_neox(x: torch.Tensor) -> torch.Tensor:
@@ -66,6 +70,29 @@ def _apply_rotary_emb_torch(
     else:
         return torch.stack((o1, o2), dim=-1).flatten(-2)
 
+@CustomOp.register("kaiju_rotary_embedding")
+class KaijuRotaryEmbedding(CustomOp):
+    def __init__(
+        self, 
+        hf_config: PretrainedConfig, 
+        dtype: torch.dtype
+    ) -> None:
+        super().__init__()
+        # BC: "rope_type" was originally "type"
+        if hasattr(hf_config, "rope_scaling") and hf_config.rope_scaling is not None:
+            self.rope_type = hf_config.rope_scaling.get("rope_type", hf_config.rope_scaling.get("type"))
+        else:
+            self.rope_type = "default"
+        self.max_seq_len_cached = hf_config.max_position_embeddings
+        self.original_max_seq_len = hf_config.max_position_embeddings
+
+        self.config = hf_config
+        self.rope_init_fn = ROPE_INIT_FUNCTIONS[self.rope_type]
+
+        inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device)
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
+        self.original_inv_freq = self.inv_freq
+
 
 def _apply_rotary_emb(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor,
                       is_neox_style: bool) -> torch.Tensor:
@@ -77,8 +104,7 @@ def _apply_rotary_emb(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor,
         is_neox_style: Whether to use the Neox-style or GPT-J-style rotary
             positional embeddings.
     """
-    if current_platform.is_cuda_alike():
-        from vllm.vllm_flash_attn.layers.rotary import apply_rotary_emb
+    if current_platform.is_cuda():
         return apply_rotary_emb(x.unsqueeze(0), cos, sin,
                                 not is_neox_style).squeeze(0)
     else:
@@ -1496,7 +1522,7 @@ def get_rope(
     if key in _ROPE_DICT:
         return _ROPE_DICT[key]
 
-    if rope_scaling is None:
+    if not rope_scaling:
         rotary_emb = RotaryEmbedding(head_size, rotary_dim, max_position, base,
                                      is_neox_style, dtype)
     else:
