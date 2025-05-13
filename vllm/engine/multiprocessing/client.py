@@ -513,8 +513,9 @@ class MQLLMEngineClient(EngineClient):
                 and request_id is not None)
 
         return self._process_request(prompt, sampling_params, request_id,
-                                     streaming_params, lora_request, trace_headers,
-                                     prompt_adapter_request, priority)
+                                     streaming_params, lora_request,
+                                     trace_headers, prompt_adapter_request,
+                                     priority)
 
     @overload
     def encode(
@@ -665,7 +666,7 @@ class MQLLMEngineClient(EngineClient):
             # queue after pulling them from the zmq socket.
             finished = False
             try:
-                buffer = None # buffer of output tokens
+                buffer = None  # buffer of output tokens
                 buffer_token_count = 0
                 while not finished:
                     request_output = await queue.get()
@@ -677,13 +678,17 @@ class MQLLMEngineClient(EngineClient):
                     if buffer is None:
                         buffer = request_output
                     else:
-                        buffer.add(request_output, aggregate = True)
+                        buffer.add(request_output, aggregate=True)
 
                     if isinstance(request_output, RequestOutput):
-                        buffer_token_count += sum(len(o.token_ids) for o in request_output.outputs)
+                        buffer_token_count += sum(
+                            len(o.token_ids) for o in request_output.outputs)
                     else:
                         buffer_token_count += 1
-                    if streaming_params is None or buffer_token_count >= streaming_params.stream_n or finished:
+                    if streaming_params is None or \
+                        buffer_token_count >= streaming_params.stream_n or \
+                        finished:
+
                         yield buffer
                         buffer = None
                         buffer_token_count = 0

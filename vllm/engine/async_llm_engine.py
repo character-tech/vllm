@@ -32,8 +32,8 @@ from vllm.outputs import PoolingRequestOutput, RequestOutput
 from vllm.pooling_params import PoolingParams
 from vllm.prompt_adapter.request import PromptAdapterRequest
 from vllm.sampling_params import SamplingParams
-from vllm.streaming_params import StreamingParams
 from vllm.sequence import ExecuteModelRequest
+from vllm.streaming_params import StreamingParams
 from vllm.transformers_utils.tokenizer import AnyTokenizer
 from vllm.usage.usage_lib import UsageContext
 from vllm.utils import Device, deprecate_kwargs, weak_bind
@@ -1043,7 +1043,7 @@ class AsyncLLMEngine(EngineClient):
             >>> ...
         """
         try:
-            buffer: Optional[RequestOutput] = None # buffer of output tokens
+            buffer: Optional[RequestOutput] = None  # buffer of output tokens
             buffer_token_count = 0
             async for output in await self.add_request(
                     request_id,
@@ -1058,10 +1058,11 @@ class AsyncLLMEngine(EngineClient):
                 if buffer is None:
                     buffer = output
                 else:
-                    buffer.add(output, aggregate = True)
-                
-                buffer_token_count += sum(len(o.token_ids) for o in output.outputs)
-                if buffer_token_count >= streaming_params.stream_n or finished:
+                    buffer.add(output, aggregate=True)
+
+                buffer_token_count += sum(
+                    len(o.token_ids) for o in output.outputs)
+                if buffer_token_count >= streaming_params.stream_n:
                     yield buffer
                     buffer = None
                     buffer_token_count = 0

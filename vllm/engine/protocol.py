@@ -124,8 +124,8 @@ class EngineClient(ABC):
                 request_id_item = f"{request_id}-{i}"
                 task = asyncio.create_task(
                     collect_from_async_generator(
-                        self.generate(individual_prompt, beam_search_params, StreamingParams(),
-                                      request_id_item)))
+                        self.generate(individual_prompt, beam_search_params,
+                                      StreamingParams(), request_id_item)))
                 tasks.append(task)
 
             output = await asyncio.gather(*tasks)

@@ -222,7 +222,7 @@ class OpenAIServingChat(OpenAIServing):
                         default_max_tokens,
                         self.model_config.logits_processor_pattern,
                         self.default_sampling_params)
-                
+
                 streaming_params = request.to_streaming_params()
 
                 self._log_inputs(request_id,
