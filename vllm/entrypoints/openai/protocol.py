@@ -1268,6 +1268,7 @@ class CompletionResponseChoice(OpenAIBaseModel):
     )
     prompt_logprobs: Optional[list[Optional[dict[int, Logprob]]]] = None
     additional_heads: Optional[AdditionalHeads] = None
+    is_filtered: bool = False
 
 
 class CompletionResponse(OpenAIBaseModel):
