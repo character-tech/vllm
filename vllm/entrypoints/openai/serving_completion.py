@@ -106,6 +106,7 @@ class OpenAIServingCompletion(OpenAIServing):
                 final = await self.beam_scorer.collapse_beams(beams, num_chunks)
                 request.prompt = final.choices[0].text
                 eom = final.choices[0].finish_reason == "stop"
+                final.choices[0].text = final.choices[0].text[input_str_len:]
                 yield f"data: {final.model_dump_json()}\n\n"
             
                 if eom:
@@ -114,7 +115,7 @@ class OpenAIServingCompletion(OpenAIServing):
             # Final chunk with trimmed text
             if final:
                 final.choices[0].text = final.choices[0].text[input_str_len:]
-                yield f"data: {final.choices[0].text}\n\n"
+                yield f"data: {final.model_dump_json()}\n\n"
         
             yield "data: [DONE]\n\n"
     
