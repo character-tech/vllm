@@ -99,11 +99,12 @@ class OpenAIServingCompletion(OpenAIServing):
         async def _chunk_generator():
             num_chunks = 0
             should_stop = False
-        
+
+            # TODO(@tanuj): calc created tokens
             while num_chunks < 4 and not should_stop:
                 num_chunks += 1
                 beams = await self.beam_validator.get_n_valid_beams(create_completion=self.create_completion, request=request, raw_request=raw_request)
-                final = await self.beam_scorer.collapse_beams(beams, num_chunks)
+                final = await self.beam_scorer.pick_best_beam(beams)
                 request.prompt = final.choices[0].text
                 should_stop = await _should_stop(final)
                 final.choices[0].text = final.choices[0].text[input_str_len:]
@@ -509,7 +510,6 @@ class OpenAIServingCompletion(OpenAIServing):
                 else:
                     logprobs = None
 
-                
                 choice_data = CompletionResponseChoice(
                     index=len(choices),
                     text=output_text,
