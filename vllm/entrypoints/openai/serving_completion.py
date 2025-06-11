@@ -12,6 +12,7 @@ from fastapi import Request
 
 from vllm.beam.beam import BeamScorer
 from vllm.beam.filtering import BeamValidator
+from vllm.beam.metrics import report_metrics
 from vllm.beam.penalty import MEOW_CLASSI_IDX, PenaltyComputer
 from vllm.config import ModelConfig
 from vllm.engine.protocol import EngineClient
@@ -99,6 +100,7 @@ class OpenAIServingCompletion(OpenAIServing):
         async def _chunk_generator():
             num_chunks = 0
             should_stop = False
+            output = None
 
             # TODO(@tanuj): calc created tokens
             while num_chunks < 4 and not should_stop:
@@ -108,12 +110,15 @@ class OpenAIServingCompletion(OpenAIServing):
                 request.prompt = final.choices[0].text
                 should_stop = await _should_stop(final)
                 final.choices[0].text = final.choices[0].text[input_str_len:]
+                output = final.choices[0].text
                 yield f"data: {final.model_dump_json()}\n\n"
             
                 if should_stop:
-                    return
+                    break
         
             yield "data: [DONE]\n\n"
+
+            report_metrics(output)
     
         return _chunk_generator()
 
