@@ -2361,6 +2361,9 @@ class GPUModelRunner(LoRAModelRunnerMixin):
                 continue
 
             # TODO: Support other attention modules, e.g., cross-attention
+            
+            logger.info("layer_name: %s, attn_module.attn_type: %s, attn_module.sliding_window: %s",
+                       layer_name, attn_module.attn_type, attn_module.sliding_window)
             if attn_module.attn_type == AttentionType.DECODER:
                 if attn_module.sliding_window is not None:
                     kv_cache_spec[layer_name] = SlidingWindowSpec(
