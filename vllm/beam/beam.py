@@ -32,7 +32,7 @@ class BeamScorer:
             ranking_scores = self.ranking_computer.compute(
                 heads_tensor, debug_info
             )
-            scores *= ranking_scores
+            scores += ranking_scores
 
         for i in range(len(responses)):
             debug_info[i].final_score = scores[i]

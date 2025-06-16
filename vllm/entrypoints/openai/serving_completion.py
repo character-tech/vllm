@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
+import math
 import time
 from collections.abc import AsyncGenerator, AsyncIterator
 from collections.abc import Sequence as GenericSequence
@@ -11,7 +12,7 @@ import torch
 from fastapi import Request
 
 from vllm.beam.beam import BeamScorer
-from vllm.beam.filtering import BeamValidator
+from vllm.beam.filtering import _CHUNK_SIZE, BeamValidator
 from vllm.beam.metrics import report_metrics
 from vllm.beam.penalty import MEOW_CLASSI_IDX, PenaltyComputer
 from vllm.config import ModelConfig
@@ -97,13 +98,14 @@ class OpenAIServingCompletion(OpenAIServing):
         async def _should_stop(final):
             return final.choices[0].finish_reason == "stop" or final.choices[0].is_filtered
         
+        max_chunks = math.ceil(request.max_tokens / _CHUNK_SIZE)
         async def _chunk_generator():
             num_chunks = 0
             should_stop = False
             output = None
 
             # TODO(@tanuj): calc created tokens
-            while num_chunks < 4 and not should_stop:
+            while num_chunks < max_chunks and not should_stop:
                 num_chunks += 1
                 beams = await self.beam_validator.get_n_valid_beams(create_completion=self.create_completion, request=request, raw_request=raw_request)
                 final = await self.beam_scorer.pick_best_beam(beams)
