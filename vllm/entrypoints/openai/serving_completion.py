@@ -13,7 +13,6 @@ from fastapi import Request
 
 from vllm.beam.beam import BeamScorer
 from vllm.beam.filtering import _CHUNK_SIZE, BeamValidator
-from vllm.beam.metrics import report_metrics
 from vllm.beam.penalty import MEOW_CLASSI_IDX, PenaltyComputer
 from vllm.config import ModelConfig
 from vllm.engine.protocol import EngineClient
