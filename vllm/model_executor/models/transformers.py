@@ -311,8 +311,8 @@ class TransformersModel(nn.Module):
         for i in range(start, end):
             sliding_window = None
             if i not in global_attention_layers:
-                assert self.config.sliding_window is not None
-                sliding_window = self.config.sliding_window
+                assert self.config.interleaved_sliding_window is not None
+                sliding_window = self.config.interleaved_sliding_window
             attention_instances[i] = Attention(
                 num_heads=num_heads,
                 head_size=head_size,
