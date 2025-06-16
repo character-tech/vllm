@@ -484,7 +484,6 @@ class MQLLMEngineClient(EngineClient):
                                      trace_headers, prompt_adapter_request,
                                      priority)
 
-    @overload
     def encode(
         self,
         prompt: PromptType,
