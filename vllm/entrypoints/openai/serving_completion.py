@@ -102,7 +102,6 @@ class OpenAIServingCompletion(OpenAIServing):
         async def _chunk_generator():
             num_chunks = 0
             should_stop = False
-            output = None
 
             # TODO(@tanuj): calc created tokens
             while num_chunks < max_chunks and not should_stop:
@@ -112,15 +111,12 @@ class OpenAIServingCompletion(OpenAIServing):
                 request.prompt = final.choices[0].text
                 should_stop = await _should_stop(final)
                 final.choices[0].text = final.choices[0].text[input_str_len:]
-                output = final.choices[0].text
                 yield f"data: {final.model_dump_json()}\n\n"
             
                 if should_stop:
-                    break
+                    return
         
             yield "data: [DONE]\n\n"
-
-            report_metrics(output)
     
         return _chunk_generator()
 
