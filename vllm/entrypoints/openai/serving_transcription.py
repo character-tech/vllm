@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 import asyncio
 import io
 import time
@@ -278,10 +279,13 @@ class OpenAIServingTranscription(OpenAIServing):
 
         result_generator: Optional[AsyncGenerator[RequestOutput, None]] = None
         try:
-            # TODO(rob): subtract len of tokenized prompt.
+            # Unlike most decoder-only models, whisper generation length is not
+            # constrained by the size of the input audio, which is mapped to a
+            # fixed-size log-mel-spectogram.
             default_max_tokens = self.model_config.max_model_len
             sampling_params = request.to_sampling_params(
                 default_max_tokens, self.default_sampling_params)
+            streaming_params = request.to_streaming_params()
 
             self._log_inputs(
                 request_id,
@@ -293,6 +297,7 @@ class OpenAIServingTranscription(OpenAIServing):
             result_generator = self.engine_client.generate(
                 prompt,
                 sampling_params,
+                streaming_params,
                 request_id,
             )
         except ValueError as e:
