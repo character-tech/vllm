@@ -30,7 +30,7 @@ DEFAULT_CHAR_SERVER_FILTER = format_filter(
 
 MAX_GENERATIONS = 10
 _CHUNK_SIZE = 16
-
+_DEFAULT_BEAM_SIZE = 3
 
 class BeamValidator:
     def __init__(self, classi_idx, classifier_names):
@@ -42,7 +42,7 @@ class BeamValidator:
                                 raw_request: Optional[Request] = None) -> list[
         Union[AsyncGenerator[str, None], CompletionResponse, ErrorResponse]]:
         request.stream = False
-        n = request.n
+        n = request.n if request.n > 1 else _DEFAULT_BEAM_SIZE
         request.n = 1
         # TODO(@tanuj): accept max tokens as a parameter
         request.max_tokens = _CHUNK_SIZE
