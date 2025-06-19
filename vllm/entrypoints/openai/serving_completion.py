@@ -79,21 +79,26 @@ class OpenAIServingCompletion(OpenAIServing):
         """
     Chunkwise beam search hack
     """
+        
         async def _process_prefix(request: CompletionRequest):
             og_max_tokens = request.max_tokens
             og_n = request.n
-            request.max_tokens = 1
+            request.max_tokens = 0
             request.n = 1
+            request.echo = True
+            request.stream = False
             res = await self.create_completion(
             request,
             raw_request=raw_request,
         )
             request.max_tokens = og_max_tokens
             request.n = og_n
+            request.echo = False
+            request.stream = True
             return res
     
         res = await _process_prefix(request)
-        input_str_len = len(request.prompt)
+        input_str_len = len(res.choices[0].text)
 
         async def _should_stop(final):
             return final.choices[0].finish_reason == "stop" or final.choices[0].is_filtered
@@ -113,6 +118,8 @@ class OpenAIServingCompletion(OpenAIServing):
                 should_stop = await _should_stop(final)
                 final.choices[0].text = final.choices[0].text[input_str_len:]
                 output = final.choices[0].text
+                if self.request_logger:
+                    logger.info(f"yielding chunk {num_chunks} text: {final.choices[0].text}")
                 yield f"data: {final.model_dump_json()}\n\n"
             
                 if should_stop:
