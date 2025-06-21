@@ -1,12 +1,13 @@
 import re
 from typing import Optional
 
-from prometheus_client import Summary
+from prometheus_client import  Summary
 
 from vllm.beam.emoji import emoji_count
 from vllm.beam.stats import en_stopword_count, contains_more_than_four_quotes_in_a_row, \
     top_ngram_count
 from vllm.entrypoints.openai.protocol import CompletionRequest
+from vllm.entrypoints.openai.protocol import CompletionResponse
 
 label_ptype_and_num_msg = dict(labelnames=["model_name"])
 
@@ -50,6 +51,11 @@ OUTPUT_DIGIT = Summary(
     "The number of digit appears in the output",
     **label_ptype_and_num_msg,
 )
+OUTPUT_FILTERED = Summary(
+    "output_filtered",
+    "The count of filtered output",
+    **label_ptype_and_num_msg,
+)
 
 def gibberish_stat(name):
     return Summary(name, f"gibberish stat: {name}", **label_ptype_and_num_msg)
@@ -62,7 +68,7 @@ PREMIUMS = gibberish_stat("premiums")
 RECOMMENDATION = gibberish_stat("recommendation")
 LIKELY_GIBBERISH = gibberish_stat("likely_gibberish_v0")
 
-def report_metrics(request: CompletionRequest, output: Optional[str]):
+def report_metrics(request: CompletionRequest, output: Optional[str], response: Optional[CompletionResponse] = None):
     if output is None:
         return
 
@@ -108,6 +114,10 @@ def report_metrics(request: CompletionRequest, output: Optional[str]):
     record(model_name, PREMIUMS, n_premiums)
     record(model_name, RECOMMENDATION, n_recommendations)
     record(model_name, LIKELY_GIBBERISH, int(likely_gibberish))
+    if response is not None and isinstance(response, CompletionResponse):
+        filtered = any([choice.is_filtered for choice in response.choices])
+        record(model_name, OUTPUT_FILTERED, int(filtered))
+
 
 
 def record(model_name, stat, value):
