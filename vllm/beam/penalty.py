@@ -646,20 +646,7 @@ def format_penalty(penalty_params_list):
     return [dict(zip(keys, vals)) for vals in penalty_params_list]
 
 
-MODEL_SERVER_PENALTY = format_penalty([
-    ("annotations_sexually_suggestive", 15000, 0.1944, 0),
-    ("annotations_porn", 15000, 0.0904, 0),
-    ("annotations_porn", 20000, 0.1603, 1),
-    ("annotations_racist", 20000, 0.1227, 1),
-    ("annotations_disturbing", 15000, 0.1176, 1),
-    ("annotations_harmful_promotes_selfharm", 10000, 0.0629, 1),
-    ("annotations_harmful_promotes_selfharm", 10001, 0.0268, 1),
-    ("annotations_harmful_promotes_terrorism", 10000, 0.0576, 1),
-    ("repetitive", 1000, 0.3709, 1),
-    ("annotations_nonsense_gd", 1000, 0.3775, 1),
-    ("annotations_looping", 1000, 0.0619, 1),
-    ("annotations_out_of_character_gd", 1000, 0.3346, 1),
-])
+MODEL_SERVER_PENALTY = format_penalty([{"name": "annotations_sexually_suggestive", "penalty": 15000, "final_threshold": 0.4484, "per_unit_penalty": 0}, {"name": "annotations_porn", "penalty": 15000, "final_threshold": 0.4378, "per_unit_penalty": 0}, {"name": "annotations_porn", "penalty": 20000, "final_threshold": 0.7773, "per_unit_penalty": 1}, {"name": "annotations_racist", "penalty": 20000, "final_threshold": 0.9763, "per_unit_penalty": 1}, {"name": "annotations_disturbing", "penalty": 15000, "final_threshold": 0.4156, "per_unit_penalty": 1}, {"name": "annotations_harmful_promotes_selfharm", "penalty": 10000, "final_threshold": 0.0657, "per_unit_penalty": 1}, {"name": "annotations_harmful_promotes_selfharm", "penalty": 10001, "final_threshold": 0.0017, "per_unit_penalty": 1}, {"name": "repetitive", "penalty": 1000, "final_threshold": 0.8164, "per_unit_penalty": 1}, {"name": "annotations_nonsense_gd", "penalty": 1000, "final_threshold": 0.2539, "per_unit_penalty": 1}, {"name": "annotations_looping", "penalty": 1000, "final_threshold": 0.1944, "per_unit_penalty": 1}, {"name": "annotations_out_of_character_gd", "penalty": 1000, "final_threshold": 0.3631, "per_unit_penalty": 1}])
 
 
 class PenaltyComputer:
