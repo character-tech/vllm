@@ -1,14 +1,22 @@
 # SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 
 import asyncio
+import math
 import time
 from collections.abc import AsyncGenerator, AsyncIterator
 from collections.abc import Sequence as GenericSequence
 from typing import Optional, Union, cast
 
 import jinja2
+import torch
 from fastapi import Request
+from typing_extensions import assert_never
 
+from vllm.beam.beam import BeamScorer
+from vllm.beam.filtering import _CHUNK_SIZE, BeamValidator
+from vllm.beam.metrics import report_metrics
+from vllm.beam.penalty import MEOW_CLASSI_IDX, PenaltyComputer
 from vllm.config import ModelConfig
 from vllm.engine.protocol import EngineClient
 from vllm.entrypoints.logger import RequestLogger
@@ -25,14 +33,18 @@ from vllm.entrypoints.openai.protocol import (CompletionLogProbs,
                                               UsageInfo)
 # yapf: enable
 from vllm.entrypoints.openai.serving_engine import (OpenAIServing,
-                                                    clamp_prompt_logprobs)
+                                                    clamp_prompt_logprobs,
+                                                    is_text_tokens_prompt)
 from vllm.entrypoints.openai.serving_models import OpenAIServingModels
+from vllm.inputs.data import (EmbedsPrompt, TokensPrompt, is_embeds_prompt,
+                              is_tokens_prompt)
 from vllm.logger import init_logger
 from vllm.outputs import RequestOutput
 from vllm.sampling_params import BeamSearchParams, SamplingParams
 from vllm.sequence import Logprob
 from vllm.transformers_utils.tokenizer import AnyTokenizer
 from vllm.utils import merge_async_iterators
+
 
 logger = init_logger(__name__)
 
@@ -60,6 +72,76 @@ class OpenAIServingCompletion(OpenAIServing):
             source = "model" if source == "auto" else source
             logger.info("Using default completion sampling params from %s: %s",
                         source, self.default_sampling_params)
+            
+        self.beam_scorer = BeamScorer(classi_idx=MEOW_CLASSI_IDX)
+        self.beam_validator = BeamValidator(classi_idx=MEOW_CLASSI_IDX, classifier_names=MEOW_CLASSI_IDX.keys())
+
+    async def create_completion_with_chunkwise_beam(
+        self,
+        request: CompletionRequest,
+        raw_request: Optional[Request] = None,
+) -> Union[AsyncGenerator[str, None], CompletionResponse, ErrorResponse]:
+        """
+    Chunkwise beam search hack
+    """
+        
+        async def _process_prefix(request: CompletionRequest):
+            og_max_tokens = request.max_tokens
+            og_n = request.n
+            request.max_tokens = 0
+            request.n = 1
+            request.echo = True
+            request.stream = False
+            res = await self.create_completion(
+            request,
+            raw_request=raw_request,
+        )
+            request.max_tokens = og_max_tokens
+            request.n = og_n
+            request.echo = False
+            request.stream = True
+            return res
+    
+        res = await _process_prefix(request)
+        if isinstance(res, ErrorResponse):
+            return res
+        
+        input_str_len = len(res.choices[0].text)
+
+        async def _should_stop(final):
+            return final.finish_reason == "stop" or final.is_filtered
+        
+        max_chunks = math.ceil(request.max_tokens / _CHUNK_SIZE)
+        async def _chunk_generator():
+            num_chunks = 0
+            should_stop = False
+            output = None
+
+            # TODO(@tanuj): calc created tokens
+            while num_chunks < max_chunks and not should_stop:
+                num_chunks += 1
+                beams = await self.beam_validator.get_n_valid_beams(create_completion=self.create_completion, request=request, raw_request=raw_request, chunk_num=num_chunks)
+                if isinstance(beams, ErrorResponse):
+                    yield f"data: {beams.model_dump_json()}\n\n"
+                    break
+            
+                final = await self.beam_scorer.pick_best_beam(beams)
+                request.prompt = final.text
+                should_stop = await _should_stop(final)
+                final.text = final.text[input_str_len:]
+                output = final.text
+                if self.request_logger:
+                    logger.info(f"yielding chunk {num_chunks} text: {final.text}")
+                yield f"data: {final.model_dump_json()}\n\n"
+            
+                if should_stop:
+                    break
+        
+            yield "data: [DONE]\n\n"
+
+            report_metrics(request, output, final)
+    
+        return _chunk_generator()
 
     async def create_completion(
         self,
@@ -89,6 +171,10 @@ class OpenAIServingCompletion(OpenAIServing):
         if request.suffix is not None:
             return self.create_error_response(
                 "suffix is not currently supported")
+
+        if request.echo and request.prompt_embeds is not None:
+            return self.create_error_response(
+                "Echo is unsupported with prompt embeds.")
 
         request_id = f"cmpl-{self._base_request_id(raw_request)}"
         created_time = int(time.time())
@@ -130,8 +216,24 @@ class OpenAIServingCompletion(OpenAIServing):
         try:
             for i, engine_prompt in enumerate(engine_prompts):
                 sampling_params: Union[SamplingParams, BeamSearchParams]
-                default_max_tokens = self.max_model_len - len(
-                    engine_prompt["prompt_token_ids"])
+                # Mypy does not infer that engine_prompt will have only one of
+                # "prompt_token_ids" or "prompt_embeds" defined, and both of
+                # these as Union[object, the expected type], where it infers
+                # object if engine_prompt is a subclass of one of the
+                # typeddicts that defines both keys. Worse, because of
+                # https://github.com/python/mypy/issues/8586, mypy does not
+                # infer the type of engine_prompt correctly because of the
+                # enumerate. So we need an unnecessary cast here.
+                engine_prompt = cast(Union[EmbedsPrompt, TokensPrompt],
+                                     engine_prompt)
+                if is_embeds_prompt(engine_prompt):
+                    input_length = len(engine_prompt["prompt_embeds"])
+                elif is_tokens_prompt(engine_prompt):
+                    input_length = len(engine_prompt["prompt_token_ids"])
+                else:
+                    assert_never(engine_prompt)
+                default_max_tokens = self.max_model_len - input_length
+
                 if request.use_beam_search:
                     sampling_params = request.to_beam_search_params(
                         default_max_tokens, self.default_sampling_params)
@@ -153,11 +255,17 @@ class OpenAIServingCompletion(OpenAIServing):
                 trace_headers = (None if raw_request is None else await
                                  self._get_trace_headers(raw_request.headers))
 
+                # Mypy inconsistently requires this second cast in different
+                # environments. It shouldn't be necessary (redundant from above)
+                # but pre-commit in CI fails without it.
+                engine_prompt = cast(Union[EmbedsPrompt, TokensPrompt],
+                                     engine_prompt)
                 if isinstance(sampling_params, BeamSearchParams):
                     generator = self.engine_client.beam_search(
                         prompt=engine_prompt,
                         request_id=request_id,
                         params=sampling_params,
+                        lora_request=lora_request,
                     )
                 else:
                     generator = self.engine_client.generate(
@@ -213,7 +321,11 @@ class OpenAIServingCompletion(OpenAIServing):
                 # We did not pass it into vLLM engine to avoid being redundant
                 # with the inputs token IDs
                 if final_res.prompt is None:
-                    final_res.prompt = request_prompts[i]["prompt"]
+                    request_prompt = request_prompts[i]
+                    if is_text_tokens_prompt(request_prompt):
+                        final_res.prompt = request_prompt["prompt"]
+                    else:
+                        final_res.prompt = None
 
             final_res_batch_checked = cast(list[RequestOutput],
                                            final_res_batch)
@@ -278,8 +390,8 @@ class OpenAIServingCompletion(OpenAIServing):
                 prompt_text = res.prompt
 
                 # Prompt details are excluded from later streamed outputs
-                if res.prompt_token_ids is not None:
-                    num_prompt_tokens[prompt_idx] = len(res.prompt_token_ids)
+                if prompt_token_ids is not None:
+                    num_prompt_tokens[prompt_idx] = len(prompt_token_ids)
 
                 delta_token_ids: GenericSequence[int]
                 out_logprobs: Optional[GenericSequence[Optional[dict[
@@ -463,6 +575,7 @@ class OpenAIServingCompletion(OpenAIServing):
                     finish_reason=output.finish_reason,
                     stop_reason=output.stop_reason,
                     prompt_logprobs=final_res.prompt_logprobs,
+                    additional_heads=output.additional_heads,
                 )
                 choices.append(choice_data)
 
@@ -484,7 +597,7 @@ class OpenAIServingCompletion(OpenAIServing):
             model=model_name,
             choices=choices,
             usage=usage,
-        )
+            kv_transfer_params=final_res_batch[0].kv_transfer_params)
 
     def _create_completion_logprobs(
         self,
