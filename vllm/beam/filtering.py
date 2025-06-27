@@ -7,7 +7,7 @@ import torch
 from starlette.datastructures import MutableHeaders
 
 from vllm.entrypoints.openai.protocol import CompletionRequest, CompletionResponse, \
-    ErrorResponse
+    ErrorResponse, CompletionResponseChoice
 from vllm.logger import init_logger
 from vllm.utils import random_uuid
 
@@ -36,32 +36,32 @@ class BeamValidator:
                                 request: CompletionRequest,
                                 chunk_num: int,
                                 raw_request: Optional[Request] = None) -> list[
-        Union[AsyncGenerator[str, None], CompletionResponse, ErrorResponse]]:
+        Union[AsyncGenerator[str, None], CompletionResponseChoice, ErrorResponse]]:
         request.stream = False
-        n = request.n if request.n > 1 else _DEFAULT_BEAM_SIZE
-        request.n = 1
-        # TODO(@tanuj): accept max tokens as a parameter
+        original_n = request.n
+        request.n = request.n if request.n > 1 else _DEFAULT_BEAM_SIZE
         request.max_tokens = _CHUNK_SIZE
         request.echo = True
         original_request_id = None
         if raw_request is not None:
             original_request_id = raw_request.headers.get("X-Request-Id", None)
-        
-        tasks = []
-        # TODO(@tanuj): deep copy request and raw_request?
-        for _ in range(n):
-            if original_request_id is not None:
-                mh = MutableHeaders(scope=raw_request.scope)
-                del mh["x-request-id"]
-                if hasattr(raw_request, "_headers"):
-                    delattr(raw_request, "_headers")
 
-            tasks.append(create_completion(
+        if original_request_id is not None:
+            mh = MutableHeaders(scope=raw_request.scope)
+            del mh["x-request-id"]
+            if hasattr(raw_request, "_headers"):
+                delattr(raw_request, "_headers")
+
+        raw_res = await create_completion(
                 request,
                 raw_request=raw_request,
-            ))
-        res = await asyncio.gather(*tasks)
-        request.n = n
+        )
+
+        if isinstance(raw_res, ErrorResponse):
+            return raw_res
+
+        res = raw_res.choices
+        request.n = original_n
         beam_validator_res = self.validate(res)
         if isinstance(beam_validator_res, ErrorResponse):
             return beam_validator_res
@@ -73,7 +73,7 @@ class BeamValidator:
 
         return filtered_res
 
-    def validate(self, responses: list[AsyncGenerator],
+    def validate(self, responses: list[CompletionResponseChoice | ErrorResponse],
                  debug_infos_G: list[BeamDebugInfo] = None):
         error_responses = [r for r in responses if isinstance(r, ErrorResponse)]
         print(f"error_responses: {error_responses}")
@@ -86,7 +86,7 @@ class BeamValidator:
             )
 
         # TODO(@tanuj) - share this with the beam scorer
-        heads = [response.choices[0].additional_heads[0] for response in responses]
+        heads = [response.additional_heads[0] for response in responses]
         heads_tensor = torch.tensor(heads, dtype=torch.float)
         prob_GC = torch.sigmoid(heads_tensor)
         valid_G = torch.ones(prob_GC.shape[0], dtype=torch.bool)
@@ -99,8 +99,7 @@ class BeamValidator:
 
             if filtered:
                 valid_G[g] = False
-                for choice in responses[g].choices:
-                    choice.is_filtered = True
+                responses[g].is_filtered = True
 
         return valid_G
 
