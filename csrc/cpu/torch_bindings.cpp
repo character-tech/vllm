@@ -211,6 +211,33 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
       "                  Tensor b_scales, Tensor azp_adj,"
       "                  Tensor? azp, Tensor? bias) -> ()");
   ops.impl("cutlass_scaled_mm_azp", torch::kCPU, &int8_scaled_mm_azp);
+#elif defined(__powerpc64__)
+  // Compute int8 quantized tensor for given scaling factor.
+  ops.def(
+      "static_scaled_int8_quant(Tensor! out, Tensor input, Tensor scale,"
+      "Tensor? azp) -> ()");
+  ops.impl("static_scaled_int8_quant", torch::kCPU, &static_scaled_int8_quant);
+
+  // Compute int8 quantized tensor and scaling factor
+  ops.def(
+      "dynamic_scaled_int8_quant(Tensor! out, Tensor input, Tensor! scale, "
+      "Tensor!? azp) -> ()");
+  ops.impl("dynamic_scaled_int8_quant", torch::kCPU,
+           &dynamic_scaled_int8_quant);
+  // W8A8 GEMM, supporting symmetric quantization.
+  ops.def(
+      "cutlass_scaled_mm(Tensor! out, Tensor a,"
+      "                  Tensor b, Tensor a_scales,"
+      "                  Tensor b_scales, Tensor? bias) -> ()");
+  ops.impl("cutlass_scaled_mm", torch::kCPU, &int8_scaled_mm_ppc64le);
+  // w8a8 GEMM, supporting asymmetric per-tensor or per-row/column
+  // quantization.
+  ops.def(
+      "cutlass_scaled_mm_azp(Tensor! out, Tensor a,"
+      "                  Tensor b, Tensor a_scales,"
+      "                  Tensor b_scales, Tensor azp_adj,"
+      "                  Tensor? azp, Tensor? bias) -> ()");
+  ops.impl("cutlass_scaled_mm_azp", torch::kCPU, &int8_scaled_mm_azp);
 #endif
 
 // SHM CCL

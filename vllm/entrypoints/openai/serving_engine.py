@@ -106,6 +106,17 @@ AnyResponse = Union[
     ScoreResponse,
 ]
 
+AnyResponse = Union[
+    CompletionResponse,
+    ChatCompletionResponse,
+    EmbeddingResponse,
+    TranscriptionResponse,
+    TokenizeResponse,
+    PoolingResponse,
+    ClassificationResponse,
+    ScoreResponse,
+]
+
 
 class TextTokensPrompt(TypedDict):
     prompt: str

@@ -88,6 +88,11 @@ class Request:
         self.num_encoder_inputs = len(self.mm_inputs)
         self.has_encoder_inputs = self.num_encoder_inputs > 0
 
+        # P/D: Connector-specific KV transfer parameters.
+        kv_params = (None if sampling_params.extra_args is None else
+                     sampling_params.extra_args.get("kv_transfer_params"))
+        self.kv_transfer_params: Optional[dict[str, Any]] = kv_params
+
         # Sanity check
         assert len(self.mm_inputs) == len(self.mm_positions)
         if self.mm_hashes:
@@ -124,7 +129,6 @@ class Request:
             sampling_params=request.sampling_params,
             pooling_params=request.pooling_params,
             eos_token_id=request.eos_token_id,
-            arrival_time=request.arrival_time,
             lora_request=request.lora_request,
             structured_output_request=StructuredOutputRequest(
                 sampling_params=request.sampling_params) \

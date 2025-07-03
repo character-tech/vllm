@@ -23,6 +23,8 @@ if is_flash_attn_varlen_func_available():
                                                reshape_and_cache_flash)
 
 from vllm.config import VllmConfig, get_layers_from_vllm_config
+from vllm.distributed.kv_transfer.kv_connector.utils import (
+    get_kv_connector_cache_layout)
 from vllm.logger import init_logger
 from vllm.utils import cdiv
 from vllm.v1.attention.backends.utils import (

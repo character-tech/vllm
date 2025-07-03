@@ -8,6 +8,7 @@ import sys
 from typing import Optional
 
 import uvloop
+import zmq
 
 import vllm
 import vllm.envs as envs

@@ -23,6 +23,7 @@ from vllm.entrypoints.openai.protocol import (CompletionLogProbs,
                                               CompletionResponseStreamChoice,
                                               CompletionStreamResponse,
                                               ErrorResponse,
+                                              PromptTokenUsageInfo,
                                               RequestResponseMetadata,
                                               UsageInfo)
 from vllm.entrypoints.openai.serving_engine import (
@@ -315,6 +316,7 @@ class OpenAIServingCompletion(OpenAIServing):
         previous_num_tokens = [0] * num_choices * num_prompts
         has_echoed = [False] * num_choices * num_prompts
         num_prompt_tokens = [0] * num_prompts
+        num_cached_tokens = [0] * num_prompts
         accumulated_text = [""] * num_choices * num_prompts
         accumulated_tokens = [[] * num_choices * num_prompts]
         accumulated_logprobs = [[] * num_choices * num_prompts]
@@ -441,10 +443,15 @@ class OpenAIServingCompletion(OpenAIServing):
 
             total_prompt_tokens = sum(num_prompt_tokens)
             total_completion_tokens = sum(previous_num_tokens)
+            total_cached_tokens = sum(num_cached_tokens)
             final_usage_info = UsageInfo(
                 prompt_tokens=total_prompt_tokens,
                 completion_tokens=total_completion_tokens,
                 total_tokens=total_prompt_tokens + total_completion_tokens)
+            if self.enable_prompt_tokens_details and total_cached_tokens:
+                final_usage_info.prompt_tokens_details = PromptTokenUsageInfo(
+                    cached_tokens=total_cached_tokens
+                )
 
             if include_usage:
                 final_usage_chunk = CompletionStreamResponse(
@@ -549,6 +556,9 @@ class OpenAIServingCompletion(OpenAIServing):
             completion_tokens=num_generated_tokens,
             total_tokens=num_prompt_tokens + num_generated_tokens,
         )
+        if self.enable_prompt_tokens_details and final_res_batch[0].num_cached_tokens:
+            usage.prompt_tokens_details = PromptTokenUsageInfo(
+                cached_tokens=final_res_batch[0].num_cached_tokens)
 
         request_metadata.final_usage_info = usage
 

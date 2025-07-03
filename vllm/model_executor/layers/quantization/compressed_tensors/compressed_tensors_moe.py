@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 
 import enum
+import importlib
 from enum import Enum
 from typing import Callable, Optional
 
@@ -686,6 +687,40 @@ class CompressedTensorsW8A8Fp8MoEMethod(CompressedTensorsMoEMethod):
                 expert_map=expert_map)
 
         assert self.fused_experts_func is not None
+
+        if self.rocm_aiter_moe_enabled:
+            return self.rocm_aiter_fused_experts_func(
+                hidden_states=x,
+                w1=layer.w13_weight,
+                w2=layer.w2_weight,
+                topk_weights=topk_weights,
+                topk_ids=topk_ids,
+                activation=activation,
+                apply_router_weight_on_input=apply_router_weight_on_input,
+                use_fp8_w8a8=True,
+                per_channel_quant=self.weight_quant.strategy ==
+                QuantizationStrategy.CHANNEL,
+                w1_scale=layer.w13_weight_scale,
+                w2_scale=layer.w2_weight_scale,
+                a1_scale=layer.w13_input_scale,
+                a2_scale=layer.w2_input_scale)
+        if self.use_marlin:
+            assert activation == "silu", (
+                f"{activation} not supported for Marlin MoE.")
+            assert not apply_router_weight_on_input, (
+                "Apply router weight on input not supported for Marlin MoE.")
+            return torch.ops.vllm.fused_marlin_moe(
+                x,
+                layer.w13_weight,
+                layer.w2_weight,
+                layer.w13_weight_scale,
+                layer.w2_weight_scale,
+                router_logits,
+                topk_weights,
+                topk_ids,
+                quant_type_id=scalar_types.float8_e4m3fn.id,
+                global_num_experts=global_num_experts,
+                expert_map=expert_map)
 
         return self.fused_experts_func(
             hidden_states=x,

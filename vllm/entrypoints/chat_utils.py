@@ -488,7 +488,8 @@ def resolve_chat_template_content_format(
         detected_format=detected_format,
     )
 
-    return detected_format
+    return detected_format if given_format == "auto" else given_format
+
 
 
 

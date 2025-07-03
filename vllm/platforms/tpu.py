@@ -85,6 +85,22 @@ class TpuPlatform(Platform):
         return 1
 
     @classmethod
+    def get_punica_wrapper(cls) -> str:
+        return "vllm.lora.punica_wrapper.punica_tpu.PunicaWrapperTPU"
+
+    @classmethod
+    def get_infinity_values(cls, dtype: torch.dtype) -> tuple[float, float]:
+        return torch.finfo(dtype).min, torch.finfo(dtype).max
+
+    @classmethod
+    def can_update_inplace(cls):
+        return False
+
+    @classmethod
+    def get_lora_vocab_padding_size(cls) -> int:
+        return 1
+
+    @classmethod
     def inference_mode(cls):
         return torch.no_grad()
 

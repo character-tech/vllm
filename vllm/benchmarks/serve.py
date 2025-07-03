@@ -830,6 +830,54 @@ def add_cli_args(parser: argparse.ArgumentParser):
         "decoding (i.e. temperature==0.0).",
     )
 
+    hf_group = parser.add_argument_group("hf dataset options")
+    hf_group.add_argument("--hf-subset",
+                          type=str,
+                          default=None,
+                          help="Subset of the HF dataset.")
+    hf_group.add_argument("--hf-split",
+                          type=str,
+                          default=None,
+                          help="Split of the HF dataset.")
+    hf_group.add_argument(
+        "--hf-output-len",
+        type=int,
+        default=None,
+        help="Output length for each request. Overrides the output lengths "
+        "from the sampled HF dataset.",
+    )
+
+    sampling_group = parser.add_argument_group("sampling parameters")
+    sampling_group.add_argument(
+        "--top-p",
+        type=float,
+        default=None,
+        help="Top-p sampling parameter. Only has effect on "
+        "openai-compatible backends.",
+    )
+    sampling_group.add_argument(
+        "--top-k",
+        type=int,
+        default=None,
+        help="Top-k sampling parameter. Only has effect on "
+        "openai-compatible backends.",
+    )
+    sampling_group.add_argument(
+        "--min-p",
+        type=float,
+        default=None,
+        help="Min-p sampling parameter. Only has effect on "
+        "openai-compatible backends.",
+    )
+    sampling_group.add_argument(
+        "--temperature",
+        type=float,
+        default=None,
+        help="Temperature sampling parameter. Only has effect on "
+        "openai-compatible backends. If not specified, default to greedy "
+        "decoding (i.e. temperature==0.0).",
+    )
+
     parser.add_argument(
         '--tokenizer-mode',
         type=str,

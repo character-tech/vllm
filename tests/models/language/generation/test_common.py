@@ -83,6 +83,9 @@ AITER_MODEL_LIST = [
         pytest.param(
             "Qwen/Qwen3-8B",  # qwen (text-only)
         ),
+        pytest.param(
+            "Qwen/Qwen3-8B",  # qwen (text-only)
+        ),
         pytest.param("stabilityai/stablelm-3b-4e1t"),  # stablelm
         pytest.param("bigcode/starcoder2-3b"),  # starcoder2
         pytest.param(

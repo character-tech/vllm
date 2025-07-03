@@ -8,6 +8,8 @@ from typing import NamedTuple, Optional
 import regex as re
 import torch
 
+import regex as re
+
 from vllm import CompletionOutput
 from vllm.utils import make_tensor_with_pad
 from vllm.v1.sample.logits_processor import BatchUpdate, LogitsProcessor
