@@ -987,6 +987,20 @@ def get_config_dtype_str(
     return None
 
 
+# TODO (bnell): use scalar_type instead of bools?
+def get_config_qtype(
+    use_fp8_w8a8: bool,
+    use_int8_w8a8: bool,
+    use_int8_w8a16: bool,
+    use_int4_w4a16: bool,
+) -> Optional[torch.dtype]:
+    if use_fp8_w8a8:
+        return torch.float8_e4m3fn
+    elif use_int8_w8a8:
+        return torch.int8
+    return None
+
+
 def inplace_fused_experts(hidden_states: torch.Tensor,
                           w1: torch.Tensor,
                           w2: torch.Tensor,

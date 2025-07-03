@@ -384,6 +384,14 @@ def test_toy_llama(use_inductor: bool):
         assert torch.allclose(outputs[0], outputs[i])
 
 
+def test_toy_llama_inductor():
+    _test_toy_llama(use_inductor=True)
+
+
+def test_toy_no_inductor():
+    _test_toy_llama(use_inductor=False)
+
+
 @torch.inference_mode
 def benchmark():
     from triton.testing import do_bench

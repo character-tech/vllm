@@ -654,6 +654,27 @@ class EngineArgs:
                                     **parallel_kwargs["tensor_parallel_size"])
         parallel_group.add_argument("--data-parallel-size", "-dp",
                                     **parallel_kwargs["data_parallel_size"])
+        parallel_group.add_argument('--data-parallel-size-local',
+                                    '-dpl',
+                                    type=int,
+                                    help='Number of data parallel replicas '
+                                    'to run on this node.')
+        parallel_group.add_argument('--data-parallel-address',
+                                    '-dpa',
+                                    type=str,
+                                    help='Address of data parallel cluster '
+                                    'head-node.')
+        parallel_group.add_argument('--data-parallel-rpc-port',
+                                    '-dpp',
+                                    type=int,
+                                    help='Port for data parallel RPC '
+                                    'communication.')
+        parallel_group.add_argument('--data-parallel-backend',
+                                    '-dpb',
+                                    type=str,
+                                    default='mp',
+                                    help='Backend for data parallel, either '
+                                    '"mp" or "ray".')
         parallel_group.add_argument(
             '--data-parallel-rank',
             '-dpn',
@@ -1354,7 +1375,7 @@ class EngineArgs:
         # Skip this check if we are running on a non-GPU platform,
         # or if the device capability is not available
         # (e.g. in a Ray actor without GPUs).
-        from vllm.platforms import current_platform
+        from vllm.platforms import CpuArchEnum, current_platform
         if (current_platform.is_cuda()
                 and current_platform.get_device_capability()
                 and current_platform.get_device_capability().major < 8):

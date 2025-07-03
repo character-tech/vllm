@@ -114,3 +114,11 @@ def test_simple_piecewise_compile(use_inductor):
         output = model(input)
         assert global_counter == 2
         assert torch.allclose(output.cpu(), torch.tensor([3., 1.]))
+
+
+def test_simple_piecewise_compile_inductor():
+    _test_simple_piecewise_compile(use_inductor=True)
+
+
+def test_simple_piecewise_compile_no_inductor():
+    _test_simple_piecewise_compile(use_inductor=False)

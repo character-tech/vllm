@@ -5,7 +5,8 @@ This page provides instructions on running vLLM with Intel Gaudi devices.
 !!! warning
     There are no pre-built wheels or images for this device, so you must build vLLM from source.
 
-## Requirements
+# --8<-- [end:installation]
+# --8<-- [start:requirements]
 
 - OS: Ubuntu 22.04 LTS
 - Python: 3.10
@@ -55,13 +56,16 @@ docker run \
   vault.habana.ai/gaudi-docker/1.18.0/ubuntu22.04/habanalabs/pytorch-installer-2.4.0:latest
 ```
 
-## Set up using Python
+# --8<-- [end:requirements]
+# --8<-- [start:set-up-using-python]
 
-### Pre-built wheels
+# --8<-- [end:set-up-using-python]
+# --8<-- [start:pre-built-wheels]
 
 Currently, there are no pre-built Intel Gaudi wheels.
 
-### Build wheel from source
+# --8<-- [end:pre-built-wheels]
+# --8<-- [start:build-wheel-from-source]
 
 To build and install vLLM from source, run:
 
@@ -82,13 +86,16 @@ pip install -r requirements/hpu.txt
 python setup.py develop
 ```
 
-## Set up using Docker
+# --8<-- [end:build-wheel-from-source]
+# --8<-- [start:set-up-using-docker]
 
-### Pre-built images
+# --8<-- [end:set-up-using-docker]
+# --8<-- [start:pre-built-images]
 
 Currently, there are no pre-built Intel Gaudi images.
 
-### Build image from source
+# --8<-- [end:pre-built-images]
+# --8<-- [start:build-image-from-source]
 
 ```bash
 docker build -f docker/Dockerfile.hpu -t vllm-hpu-env  .
@@ -105,7 +112,8 @@ docker run \
 !!! tip
     If you're observing the following error: `docker: Error response from daemon: Unknown runtime specified habana.`, please refer to "Install Using Containers" section of [Intel Gaudi Software Stack and Driver Installation](https://docs.habana.ai/en/v1.18.0/Installation_Guide/Bare_Metal_Fresh_OS.html). Make sure you have `habana-container-runtime` package installed and that `habana` container runtime is registered.
 
-## Extra information
+# --8<-- [end:build-image-from-source]
+# --8<-- [start:extra-information]
 
 ### Supported features
 
@@ -401,3 +409,4 @@ the below:
   higher batches. You can do that by adding `--enforce-eager` flag to
   server (for online serving), or by passing `enforce_eager=True`
   argument to LLM constructor (for offline inference).
+# --8<-- [end:extra-information]

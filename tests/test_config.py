@@ -31,6 +31,18 @@ class _TestConfigFields:
     c: str = "default"
 
 
+def test_compile_config_repr_succeeds():
+    # setup: VllmBackend mutates the config object
+    config = VllmConfig()
+    backend = VllmBackend(config)
+    backend.configure_post_pass()
+
+    # test that repr(config) succeeds
+    val = repr(config)
+    assert 'VllmConfig' in val
+    assert 'inductor_passes' in val
+
+
 def test_get_field():
     with pytest.raises(ValueError):
         get_field(_TestConfigFields, "a")
