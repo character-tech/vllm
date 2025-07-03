@@ -5,6 +5,7 @@ from vllm.beam.debug import BeamDebugInfo
 from vllm.beam.penalty import PenaltyComputer
 import torch
 from vllm.beam.ranking import RankingComputer
+from vllm.beam.tracing import trace_async_method
 from vllm.entrypoints.openai.protocol import CompletionResponse, ErrorResponse, CompletionResponseChoice
 from vllm.logger import init_logger
 
@@ -16,6 +17,7 @@ class BeamScorer:
         self.penalty_computer = PenaltyComputer(classi_idx)
         self.ranking_computer = RankingComputer(classi_idx)
 
+    @trace_async_method(span_name='pick_best_beam')
     async def pick_best_beam(self, responses: list[
         Union[AsyncGenerator[str, None], CompletionResponseChoice, ErrorResponse]]) -> Union[
         AsyncGenerator[str, None], CompletionResponseChoice, ErrorResponse]:
