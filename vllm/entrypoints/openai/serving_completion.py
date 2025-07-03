@@ -17,6 +17,7 @@ from vllm.beam.beam import BeamScorer
 from vllm.beam.filtering import _CHUNK_SIZE, BeamValidator
 from vllm.beam.metrics import report_metrics
 from vllm.beam.penalty import MEOW_CLASSI_IDX, PenaltyComputer
+from vllm.beam.tracing import trace_streaming_completion, trace_async_method
 from vllm.config import ModelConfig
 from vllm.engine.protocol import EngineClient
 from vllm.entrypoints.logger import RequestLogger
@@ -76,10 +77,8 @@ class OpenAIServingCompletion(OpenAIServing):
             
         self.beam_scorer = BeamScorer(classi_idx=MEOW_CLASSI_IDX)
         self.beam_validator = BeamValidator(classi_idx=MEOW_CLASSI_IDX, classifier_names=MEOW_CLASSI_IDX.keys())
-        self.tracer = init_tracer(
-                "vllm.entrypoints.openai.serving_completion",
-                "http://localhost:4317")
 
+    @trace_streaming_completion()
     async def create_completion_with_chunkwise_beam(
         self,
         request: CompletionRequest,
@@ -88,7 +87,7 @@ class OpenAIServingCompletion(OpenAIServing):
         """
     Chunkwise beam search hack
     """
-        
+        @trace_async_method(span_name='_process_prefix')
         async def _process_prefix(request: CompletionRequest):
             og_max_tokens = request.max_tokens
             og_n = request.n
