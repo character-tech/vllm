@@ -1,0 +1,69 @@
+name: Build & Publish vLLM Docker
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deployment
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+
+    env:
+      REGION: us-central1
+      REPO: vllm
+      IMAGE: vllm-forked
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account:           ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v2"
+        with:
+          install_components: "beta"
+
+      - name: Configure Docker credential helper
+        run: |
+          gcloud --quiet auth configure-docker ${REGION}-docker.pkg.dev
+          gcloud --quiet auth configure-docker gcr.io
+
+      - name: Determine tags
+        id: tags
+        run: |
+          SHA=$(git rev-parse --short=7 HEAD)
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "tags=${SHA},latest" >> $GITHUB_OUTPUT
+
+      - name: Build & Push to Staging, Prod, and GCR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            HF_HOME=/huggingface/cache
+          tags: |
+            ${REGION}-docker.pkg.dev/${{ secrets.PROJECT_ID_STAGING }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+            ${REGION}-docker.pkg.dev/${{ secrets.PROJECT_ID_STAGING }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
+            ${REGION}-docker.pkg.dev/${{ secrets.PROJECT_ID_PROD }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+            ${REGION}-docker.pkg.dev/${{ secrets.PROJECT_ID_PROD }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
+            gcr.io/${{ secrets.PROJECT_ID_PROD }}/vllm/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+            gcr.io/${{ secrets.PROJECT_ID_PROD }}/vllm/${{ env.IMAGE }}:latest
+
