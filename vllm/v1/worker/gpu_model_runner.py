@@ -1160,6 +1160,27 @@ class GPUModelRunner(LoRAModelRunnerMixin):
         if scheduler_output.grammar_bitmask is not None:
             self.apply_grammar_bitmask(scheduler_output, logits)
 
+        # TODO(rohin): this is where logits were last processed
+        import os
+        LOGITS_DIR = os.getenv("VLLM_LOGITS_DIR")
+        # if torch.distributed.get_rank() == 0:
+        # print(f"num_scheduled_tokens: {num_scheduled_tokens}")
+        if LOGITS_DIR is not None and num_scheduled_tokens > 1 \
+            and torch.distributed.get_rank() == 0:
+            start_idx = 0 if input_ids[
+                0] != 5 else 1  # 5 is the <|beginningofdialog|> token
+            print(f"input_ids: {input_ids}")
+            saved_logits_dir = f"{LOGITS_DIR}/{input_ids[start_idx]}"
+            for i in range(start_idx + 1,
+                           min(start_idx + 3, num_scheduled_tokens)):
+                saved_logits_dir += f"_{input_ids[i]}"
+
+            file_name = f"{num_scheduled_tokens}.pt"
+            os.makedirs(LOGITS_DIR, exist_ok=True)
+            os.makedirs(saved_logits_dir, exist_ok=True)
+            torch.save(logits[0], f"{saved_logits_dir}/{file_name}")
+            print(f"Saved logits to {saved_logits_dir}/{file_name}")
+
         # Sample the next token and get logprobs if needed.
         sampling_metadata = self.input_batch.sampling_metadata
         if spec_decode_metadata is None:
