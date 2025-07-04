@@ -37,8 +37,7 @@ class BeamValidator:
     async def get_n_valid_beams(self, create_completion: Callable,
                                 request: CompletionRequest,
                                 chunk_num: int,
-                                raw_request: Optional[Request] = None) -> list[
-        Union[AsyncGenerator[str, None], CompletionResponseChoice, ErrorResponse]]:
+                                raw_request: Optional[Request] = None) -> CompletionResponse | ErrorResponse:
         request.stream = False
         original_n = request.n
         request.n = request.n if request.n > 1 else _DEFAULT_BEAM_SIZE
@@ -70,10 +69,12 @@ class BeamValidator:
         
         filtered_res = [r for r, valid in zip(res, beam_validator_res) if valid]
         logger.debug("Filtered count: %d", len(filtered_res))
-        if len(filtered_res) == 0:
-            return res
 
-        return filtered_res
+        raw_res.choices = filtered_res
+        if len(filtered_res) == 0:
+            return raw_res
+
+        return raw_res
 
     def validate(self, responses: list[CompletionResponseChoice | ErrorResponse],
                  debug_infos_G: list[BeamDebugInfo] = None):
