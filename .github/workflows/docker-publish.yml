@@ -22,6 +22,8 @@ jobs:
       REGION: us-central1
       REPO: vllm
       IMAGE: vllm-forked
+      STAGING_PROJECT: character-ai-staging
+      PROD_PROJECT: character-ai
 
     steps:
       - name: Checkout code
@@ -54,16 +56,16 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
+          file: ./docker/Dockerfile_internal
           platforms: linux/amd64
           push: true
           build-args: |
             HF_HOME=/huggingface/cache
           tags: |
-            ${REGION}-docker.pkg.dev/${{ secrets.PROJECT_ID_STAGING }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
-            ${REGION}-docker.pkg.dev/${{ secrets.PROJECT_ID_STAGING }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
-            ${REGION}-docker.pkg.dev/${{ secrets.PROJECT_ID_PROD }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
-            ${REGION}-docker.pkg.dev/${{ secrets.PROJECT_ID_PROD }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
-            gcr.io/${{ secrets.PROJECT_ID_PROD }}/vllm/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
-            gcr.io/${{ secrets.PROJECT_ID_PROD }}/vllm/${{ env.IMAGE }}:latest
+            ${REGION}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+            ${REGION}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
+            ${REGION}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+            ${REGION}-docker.pkg.dev/${{ env.PROD_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
+            gcr.io/${{ env.PROD_PROJECT }}/vllm/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+            gcr.io/${{ env.PROD_PROJECT }}/vllm/${{ env.IMAGE }}:latest
 

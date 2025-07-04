@@ -1,0 +1,10 @@
+FROM us-central1-docker.pkg.dev/character-ai/vllm/vllm-forked:latest as builder
+
+COPY . /tmp/vllm
+RUN pip uninstall -y vllm
+RUN pip install /tmp/vllm
+RUN rm -rf /tmp/vllm
+RUN python3 -c "import vllm; print('Custom vLLM loaded successfully')"
+
+
+ENV HF_HOME=/huggingface/cache
