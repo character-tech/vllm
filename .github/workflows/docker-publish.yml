@@ -31,6 +31,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Free up disk space
+        run: |
+          echo "Disk usage before cleanup:"
+          df -h
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
+          sudo docker system prune -af
+          sudo docker volume prune -f
+          echo "Disk usage after cleanup:"
+          df -h
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
