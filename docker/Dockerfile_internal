@@ -1,9 +1,9 @@
 FROM us-central1-docker.pkg.dev/character-ai/vllm/vllm-forked:latest as builder
 
-COPY . /tmp/vllm
+COPY . /mnt/vllm
 RUN pip uninstall -y vllm
-RUN pip install /tmp/vllm
-RUN rm -rf /tmp/vllm
+RUN pip install /mnt/vllm
+RUN rm -rf /mnt/vllm
 RUN python3 -c "import vllm; print('Custom vLLM loaded successfully')"
 
 
