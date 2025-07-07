@@ -1007,10 +1007,9 @@ class CompletionRequest(OpenAIBaseModel):
             guided_decoding=guided_decoding,
             logit_bias=self.logit_bias,
             allowed_token_ids=self.allowed_token_ids,
-            additional_heads=True,
-            allowed_token_ids=self.allowed_token_ids,
             extra_args=({"kv_transfer_params": self.kv_transfer_params}
-                        if self.kv_transfer_params else None)
+                        if self.kv_transfer_params else None),
+            additional_heads=True,
         )
 
     def to_streaming_params(self, ) -> StreamingParams:
