@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-22.04-16core
+    runs-on: ubuntu-22.04
     timeout-minutes: 360
 
     env:
@@ -35,14 +35,35 @@ jobs:
         run: |
           echo "Disk usage before cleanup:"
           df -h
+          
+          # Remove unnecessary packages and files
+          sudo apt-get remove -y '^aspnetcore-.*' '^dotnet-.*' '^llvm-.*' '^php.*' '^mysql-.*' '^postgresql-.*'
+          sudo apt-get autoremove -y
+          sudo apt-get autoclean
+          
+          # Remove large directories
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf /usr/local/share/boost
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/graalvm/
+          sudo rm -rf /usr/local/.ghcup/
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/local/share/chromium
+          sudo rm -rf /usr/local/lib/node_modules
+          
+          # Clean package caches
           sudo apt-get clean
-          sudo docker system prune -af
-          sudo docker volume prune -f
+          
+          # Clean Docker
+          sudo docker system prune -af --volumes
+          sudo docker builder prune -af
+          
+          # Clean temp files
+          sudo rm -rf /tmp/*
+          sudo rm -rf /var/tmp/*
+          
           echo "Disk usage after cleanup:"
           df -h
 
