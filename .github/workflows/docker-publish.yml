@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04-16core
     timeout-minutes: 360
 
     env:
