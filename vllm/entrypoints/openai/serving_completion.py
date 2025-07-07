@@ -614,6 +614,7 @@ class OpenAIServingCompletion(OpenAIServing):
                     finish_reason=output.finish_reason,
                     stop_reason=output.stop_reason,
                     prompt_logprobs=final_res.prompt_logprobs,
+                    additional_heads=output.additional_heads,
                 )
                 choices.append(choice_data)
 
