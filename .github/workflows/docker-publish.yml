@@ -37,11 +37,26 @@ jobs:
           df -h
           
           # Remove unnecessary packages and files
+          sudo apt install aptitude -y >/dev/null 2>&1
+          sudo aptitude purge aria2 ansible azure-cli shellcheck rpm xorriso zsync \
+            esl-erlang firefox gfortran-8 gfortran-9 google-chrome-stable \
+            imagemagick \
+            libmagickcore-dev libmagickwand-dev libmagic-dev ant ant-optional kubectl \
+            mercurial apt-transport-https mono-complete libmysqlclient \
+            unixodbc-dev yarn chrpath libssl-dev libxft-dev \
+            libfreetype6 libfreetype6-dev libfontconfig1 libfontconfig1-dev \
+            snmp pollinate libpq-dev postgresql-client powershell ruby-full \
+            sphinxsearch subversion mongodb-org azure-cli microsoft-edge-stable \
+            -y -f >/dev/null 2>&1
+          sudo aptitude purge microsoft-edge-stable -f -y >/dev/null 2>&1 || true
+          sudo apt purge microsoft-edge-stable -f -y >/dev/null 2>&1 || true
+
           sudo apt-get remove -y '^aspnetcore-.*' '^dotnet-.*' '^llvm-.*' '^php.*' '^mysql-.*' '^postgresql-.*'
           sudo apt-get autoremove -y
           sudo apt-get autoclean
           
           # Remove large directories
+          sudo rm -rf /opt/hostedtoolcache
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
@@ -66,6 +81,12 @@ jobs:
           
           echo "Disk usage after cleanup:"
           df -h
+          
+      - name: Check disk space
+        run: |
+          sudo dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -nr | head
+          df . -h
+          sudo du /usr/ -hx -d 4 --threshold=1G | sort -hr | head
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
