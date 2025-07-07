@@ -220,7 +220,7 @@ class OpenAIServing:
         self.request_logger = request_logger
         self.return_tokens_as_token_ids = return_tokens_as_token_ids
 
-        self._tokenizer_executor = ThreadPoolExecutor(max_workers=1)
+        self._tokenizer_executor = ThreadPoolExecutor(max_workers=8)
 
         self._tokenize_prompt_input_async = make_async(
             self._tokenize_prompt_input, executor=self._tokenizer_executor)
