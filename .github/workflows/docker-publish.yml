@@ -76,6 +76,7 @@ jobs:
           file: ./docker/Dockerfile_internal
           platforms: linux/amd64
           push: true
+          no-cache: true
           build-args: |
             HF_HOME=/huggingface/cache
           tags: |
