@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 360
 
     env:
-      REGION: us-central1
+      REGION : us-central1
       REPO: vllm
       IMAGE: vllm-forked
       STAGING_PROJECT: character-ai-staging
@@ -44,7 +44,7 @@ jobs:
 
       - name: Configure Docker credential helper
         run: |
-          gcloud --quiet auth configure-docker ${REGION}-docker.pkg.dev
+          gcloud --quiet auth configure-docker ${{ env.REGION }}-docker.pkg.dev
           gcloud --quiet auth configure-docker gcr.io
 
       - name: Determine tags
@@ -64,10 +64,10 @@ jobs:
           build-args: |
             HF_HOME=/huggingface/cache
           tags: |
-            ${REGION}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
-            ${REGION}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
-            ${REGION}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
-            ${REGION}-docker.pkg.dev/${{ env.PROD_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROD_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
             gcr.io/${{ env.PROD_PROJECT }}/vllm/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
             gcr.io/${{ env.PROD_PROJECT }}/vllm/${{ env.IMAGE }}:latest
 
