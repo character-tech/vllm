@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 import argparse
 import json
 import logging
@@ -236,7 +237,11 @@ def calculate_statistics(vllm_logits_file, roller_logits_file, eos_tok_id):
     }
 
 
-def print_statistics(roller_outer_dir, vllm_outer_dir, prompt_dir, new_files):
+def print_statistics(roller_outer_dir,
+                     vllm_outer_dir,
+                     prompt_dir,
+                     new_files,
+                     idx=None):
     global tokenizer
     if tokenizer is None:
         tokenizer = load_tokenizer()
@@ -283,7 +288,7 @@ def print_statistics(roller_outer_dir, vllm_outer_dir, prompt_dir, new_files):
         print()
         idx += 1
 
-    print(f"CUMULATIVE_STATS for {prompt_dir}:")
+    print(f"CUMULATIVE_STATS for {idx} {prompt_dir}:")
     print(
         f"CUMULATIVE_STATS: VLLM EV message length: {vllm_ev_message_length}")
     print(
@@ -376,11 +381,18 @@ def get_files_and_hashes(dir):
             for file in os.listdir(dir)]
 
 
-def process_prod_response_pair(prompt, response):
+def process_prod_response_pair(prompt,
+                               response,
+                               print_full_inputs=False,
+                               idx=None):
     roller_outer_dir = os.getenv("ROLLER_LOGITS_DIR")
     vllm_outer_dir = os.getenv("VLLM_LOGITS_DIR")
 
-    print(f"Prompt: {prompt[:50]}... Response: {response[:50]}...")
+    if not print_full_inputs:
+        print(f"Prompt: {prompt[:50]}... Response: {response[:50]}... {idx=}")
+    else:
+        print(f"Prompt\n{prompt}\n\nResponse\n{response}\n\n")
+
     prompt_dir = get_prompt_dir(prompt)
     before_files = get_files_and_hashes(
         os.path.join(
@@ -395,20 +407,23 @@ def process_prod_response_pair(prompt, response):
     for file, hash in after_files:
         if (file, hash) not in before_files:
             new_files.append(file)
-    print_statistics(roller_outer_dir, vllm_outer_dir, prompt_dir, new_files)
+    print_statistics(roller_outer_dir, vllm_outer_dir, prompt_dir, new_files,
+                     idx)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=10)
     parser.add_argument("--random_selection", action="store_true")
+    parser.add_argument("--print_full_inputs", action="store_true")
     return parser.parse_args()
 
 
 def compare_vllm_roller_logits(args):
     prompt_response_pairs = use_replay_chat(args.limit)
-    for prompt, response in prompt_response_pairs:
-        process_prod_response_pair(prompt, response)
+    for idx, (prompt, response) in enumerate(prompt_response_pairs):
+        process_prod_response_pair(prompt, response, args.print_full_inputs,
+                                   idx)
 
 
 if __name__ == "__main__":
