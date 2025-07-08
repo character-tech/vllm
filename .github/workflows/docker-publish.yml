@@ -17,6 +17,8 @@ concurrency:
 
 jobs:
   build-and-push:
+    strategy:
+      fail-fast: false
     runs-on: large_ubuntu_4cpu
     timeout-minutes: 360
 
