@@ -14,12 +14,14 @@ from transformers import AutoTokenizer
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning
                          )  # disable annoying security warning
 
-# adapted from https://github.com/character-tech/character-tech/blob/main/rayman/rayman/evals/replay_chat.py 
+# adapted from https://github.com/character-tech/character-tech/blob/main/rayman/rayman/evals/replay_chat.py
 STATIC_PATH = "gs://character-ai-us-central1/data/evals/static_replay_chat_4_10.jsonl"
 NUM_TURNS_TO_CONSIDER = 20  # Assuming this constant from the original code
 
 
-def format_user_chats(prompt_data): # Format the chat context messages into a readable prompt string
+def format_user_chats(
+    prompt_data
+):  # Format the chat context messages into a readable prompt string
     last_turns = prompt_data["chat_context_messages"][-NUM_TURNS_TO_CONSIDER:]
 
     chat_parts = []
@@ -32,7 +34,8 @@ def format_user_chats(prompt_data): # Format the chat context messages into a re
     return "\n".join(chat_parts)
 
 
-def extract_prompt_response_from_generation(generation): # Extract prompt and response from a single generation
+def extract_prompt_response_from_generation(
+        generation):  # Extract prompt and response from a single generation
     try:
         prompt_data = generation["payload"]["prompt_data"]
 
@@ -46,7 +49,10 @@ def extract_prompt_response_from_generation(generation): # Extract prompt and re
         return None, None
 
 
-def load_static_generations(filename=STATIC_PATH, limit=None, random_selection=False): # Load generations from static file
+def load_static_generations(
+        filename=STATIC_PATH,
+        limit=None,
+        random_selection=False):  # Load generations from static file
     df = pd.read_json(filename, lines=True)
     if limit:
         if random_selection:
@@ -57,7 +63,8 @@ def load_static_generations(filename=STATIC_PATH, limit=None, random_selection=F
     return df.to_dict(orient="records")
 
 
-def generate_prompt_response_pairs_from_replay_chat(limit=10, random_selection=False): # 
+def generate_prompt_response_pairs_from_replay_chat(limit=10,
+                                                    random_selection=False):  #
     print("Loading chat data from static source...")
     prompt_response_pairs = []
 
@@ -89,15 +96,18 @@ def generate_prompt_response_pairs_from_replay_chat(limit=10, random_selection=F
     )
     return prompt_response_pairs
 
-def logits_hash(logits):# hash rounded logits (for comparison)
+
+def logits_hash(logits):  # hash rounded logits (for comparison)
     import hashlib
     rounded_logits = torch.round(logits * 1000) / 1000
     return hashlib.sha256(rounded_logits.to(
         torch.float32).numpy().tobytes()).hexdigest()[:10]
 
-tokenizer = None # global tokenizer
 
-def load_tokenizer(): # load tokenizer from checkpoint dir
+tokenizer = None  # global tokenizer
+
+
+def load_tokenizer():  # load tokenizer from checkpoint dir
     CHECKPOINT_DIR = os.getenv(
         "CHECKPOINT_DIR",
         "/data/rohin/ckpts/roar_sft_adventure_safe.05-01-22-00-25.uc33.classi_only.tp1.minimal/"
@@ -135,7 +145,7 @@ def calculate_statistics(vllm_logits_file, roller_logits_file, eos_tok_id):
 
     vllm_probs = torch.exp(vllm_log_probs)
     roller_probs = torch.exp(roller_log_probs)
-    
+
     vllm_eos_prob = vllm_probs[..., eos_tok_id].mean()
     roller_eos_prob = roller_probs[..., eos_tok_id].mean()
     eos_prob_diff = vllm_eos_prob - roller_eos_prob
@@ -267,6 +277,7 @@ def print_statistics(roller_outer_dir,
     for k, v in cumulative_stats.items():
         print(f"CUMULATIVE_STATS: {k}: {v / idx}")
 
+
 def encode(input_text):
     global tokenizer
     if tokenizer is None:
@@ -372,7 +383,8 @@ def parse_args():
 
 
 def compare_vllm_roller_logits(args):
-    prompt_response_pairs = generate_prompt_response_pairs_from_replay_chat(args.limit)
+    prompt_response_pairs = generate_prompt_response_pairs_from_replay_chat(
+        args.limit)
     for idx, (prompt, response) in enumerate(prompt_response_pairs):
         process_prod_response_pair(prompt, response, args.print_full_inputs,
                                    idx)
