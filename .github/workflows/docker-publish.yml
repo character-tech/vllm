@@ -26,7 +26,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Check disk space
         run: |
           sudo dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -nr | head
@@ -39,7 +38,7 @@ jobs:
           SHA=$(git rev-parse --short=7 HEAD)
           echo "sha=$SHA" >> $GITHUB_OUTPUT
           echo "tags=${SHA},latest" >> $GITHUB_OUTPUT
-
+      
       - name: Authenticate to GCP Staging
         uses: google-github-actions/auth@v2
         with:
@@ -55,19 +54,24 @@ jobs:
         run: |
           gcloud --quiet auth configure-docker ${{ env.REGION }}-docker.pkg.dev
           
-      - name: Build & Push to Staging
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/Dockerfile_internal
-          platforms: linux/amd64
-          push: true
-          build-args: |
-            HF_HOME=/huggingface/cache
-          tags: |
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
-
+      # Build the image locally first
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f ./docker/Dockerfile_internal \
+            --build-arg HF_HOME=/huggingface/cache \
+            -t local-image:${{ steps.tags.outputs.sha }} \
+            .
+          
+      # Tag and push to staging
+      - name: Tag and Push to Staging
+        run: |
+          docker tag local-image:${{ steps.tags.outputs.sha }} ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+          docker tag local-image:${{ steps.tags.outputs.sha }} ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
+          
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
+      
       # Re-authenticate to prod for prod pushes
       - name: Authenticate to GCP Prod
         uses: google-github-actions/auth@v2
