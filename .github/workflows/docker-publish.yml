@@ -26,7 +26,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-     
+
+      - name: Check disk space
+        run: |
+          sudo dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -nr | head
+          df . -h
+          sudo du /usr/ -hx -d 4 --threshold=1G | sort -hr | head
+          
       - name: Determine tags
         id: tags
         run: |
@@ -34,19 +40,18 @@ jobs:
           echo "sha=$SHA" >> $GITHUB_OUTPUT
           echo "tags=${SHA},latest" >> $GITHUB_OUTPUT
 
-      # Authenticate to staging and push
       - name: Authenticate to GCP Staging
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_STAGING }}
           service_account: ${{ secrets.GCP_SA_EMAIL_STAGING }}
           
-      - name: "Set up Cloud SDK for Staging"
+      - name: "Set up Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v2"
         with:
           install_components: "beta"
           
-      - name: Configure Docker credential helper for Staging
+      - name: Configure Docker credential helper for build
         run: |
           gcloud --quiet auth configure-docker ${{ env.REGION }}-docker.pkg.dev
           
@@ -63,7 +68,7 @@ jobs:
             ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
             ${{ env.REGION }}-docker.pkg.dev/${{ env.STAGING_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
 
-      # Authenticate to prod and push
+      # Re-authenticate to prod for prod pushes
       - name: Authenticate to GCP Prod
         uses: google-github-actions/auth@v2
         with:
@@ -80,17 +85,15 @@ jobs:
           gcloud --quiet auth configure-docker ${{ env.REGION }}-docker.pkg.dev
           gcloud --quiet auth configure-docker gcr.io
           
-      - name: Build & Push to Prod and GCR
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/Dockerfile_internal
-          platforms: linux/amd64
-          push: true
-          build-args: |
-            HF_HOME=/huggingface/cache
-          tags: |
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROD_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROD_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
-            gcr.io/${{ env.PROD_PROJECT }}/vllm/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
-            gcr.io/${{ env.PROD_PROJECT }}/vllm/${{ env.IMAGE }}:latest
+      # Push same image to prod
+      - name: Push to Prod and GCR
+        run: |
+          docker tag local-image:${{ steps.tags.outputs.sha }} ${{ env.REGION }}-docker.pkg.dev/${{ env.PROD_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+          docker tag local-image:${{ steps.tags.outputs.sha }} ${{ env.REGION }}-docker.pkg.dev/${{ env.PROD_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
+          docker tag local-image:${{ steps.tags.outputs.sha }} gcr.io/${{ env.PROD_PROJECT }}/vllm/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+          docker tag local-image:${{ steps.tags.outputs.sha }} gcr.io/${{ env.PROD_PROJECT }}/vllm/${{ env.IMAGE }}:latest
+          
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROD_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROD_PROJECT }}/${{ env.REPO }}/${{ env.IMAGE }}:latest
+          docker push gcr.io/${{ env.PROD_PROJECT }}/vllm/${{ env.IMAGE }}:${{ steps.tags.outputs.sha }}
+          docker push gcr.io/${{ env.PROD_PROJECT }}/vllm/${{ env.IMAGE }}:latest
