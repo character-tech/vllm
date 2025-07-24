@@ -307,6 +307,10 @@ class TransformersModel(nn.Module):
             global_attention_layers = self.config.global_attention_layers
         else:
             global_attention_layers = None
+            # NOTE: If global_attention_layers is not set, we assume that all
+            #       layers are global attention layers. To use sliding window
+            #       attention, the global_attention_layers must be set in the
+            #       config.
 
         for i in range(start, end):
             sliding_window = None
