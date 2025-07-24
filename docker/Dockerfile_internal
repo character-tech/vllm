@@ -1,4 +1,4 @@
-FROM us-central1-docker.pkg.dev/character-ai/vllm/vllm-forked:latest as builder
+FROM us-central1-docker.pkg.dev/character-ai/vllm/vllm-forked:d0ab76f as builder
 COPY . /mnt/vllm
 
 # Install without build isolation to preserve existing binaries
