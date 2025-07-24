@@ -411,12 +411,12 @@ class TransformersModel(nn.Module):
     def compute_additional_head(
         self,
         hidden_states: torch.Tensor,
-        additional_heads_data: Optional[dict[str, Any]],
+        additional_heads_extra_inputs: Optional[list[dict[str, Any]]],
     ) -> Optional[torch.Tensor]:
         if get_pp_group().is_last_rank and hasattr(self.model,
                                                    "compute_additional_head"):
-            return self.model.compute_additional_head(hidden_states,
-                                                      additional_heads_data)
+            return self.model.compute_additional_head(
+                hidden_states, additional_heads_extra_inputs)
         return None
 
     def load_weights(self, weights: Iterable[tuple[str,
@@ -517,11 +517,11 @@ class TransformersForCausalLM(nn.Module, SupportsQuant, SupportsLoRA,
     def compute_additional_head(
         self,
         hidden_states: torch.Tensor,
-        additional_heads_data: Optional[dict[str, Any]],
+        additional_heads_extra_inputs: Optional[list[dict[str, Any]]],
     ) -> Optional[torch.Tensor]:
         if hasattr(self.model, "compute_additional_head"):
-            return self.model.compute_additional_head(hidden_states,
-                                                      additional_heads_data)
+            return self.model.compute_additional_head(
+                hidden_states, additional_heads_extra_inputs)
         return None
 
     def load_weights(self, weights: Iterable[tuple[str,

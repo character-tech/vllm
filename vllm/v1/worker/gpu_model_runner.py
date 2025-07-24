@@ -1429,13 +1429,14 @@ class GPUModelRunner(LoRAModelRunnerMixin):
 
         if run_additional_heads:
             assert hasattr(self.model, "compute_additional_head")
-            additional_heads_data: Optional[list[Optional[dict[str, Any]]]] = [
-                self.input_batch.additional_heads_data.get(i, None)
-                for i in range(self.input_batch.num_reqs)
-            ]
-            if additional_heads_data is not None and not any(
-                    additional_heads_data):
-                additional_heads_data = None
+            additional_heads_extra_inputs: Optional[list[Optional[dict[
+                str, Any]]]] = [
+                    self.input_batch.additional_heads_extra_inputs.get(
+                        i, None) for i in range(self.input_batch.num_reqs)
+                ]
+            if additional_heads_extra_inputs is not None and not any(
+                    additional_heads_extra_inputs):
+                additional_heads_extra_inputs = None
 
             # NOTE: In theory not all logit indices need additional
             # head outputs and we could save some flops by masking.
@@ -1443,7 +1444,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
             # is simpler/introduces less overhead.
             additional_heads_output_data: Union[torch.Tensor, list[dict[
                 str, float]]] = self.model.compute_additional_head(
-                    sample_hidden_states, additional_heads_data)
+                    sample_hidden_states, additional_heads_extra_inputs)
 
             if isinstance(additional_heads_output_data, torch.Tensor):
                 additional_heads_output_data = \
