@@ -1363,6 +1363,7 @@ class GPUModelRunner(LoRAModelRunnerMixin):
 
         # Run the model.
         # Use persistent buffers for CUDA graphs.
+        start_time = time.perf_counter()
         with set_forward_context(
                 attn_metadata,
                 self.vllm_config,
@@ -1378,10 +1379,17 @@ class GPUModelRunner(LoRAModelRunnerMixin):
                 intermediate_tensors=intermediate_tensors,
                 inputs_embeds=inputs_embeds,
             )
+            torch.cuda.synchronize()
+            forward_time = time.perf_counter() - start_time
 
             self.maybe_wait_for_kv_save()
             finished_sending, finished_recving = (
                 self.get_finished_kv_transfers(scheduler_output))
+
+        import os
+        if "FORWARD_TIME" in os.environ:
+            os.environ["FORWARD_TIME"] = str(forward_time)
+            return EMPTY_MODEL_RUNNER_OUTPUT
 
         if self.use_aux_hidden_state_outputs:
             hidden_states, aux_hidden_states = model_output
