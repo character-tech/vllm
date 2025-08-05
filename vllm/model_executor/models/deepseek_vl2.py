@@ -363,7 +363,7 @@ class DeepseekVLV2ForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
             )
 
         if self.text_config.topk_method == "noaux_tc":
-            architectures = ["DeepseekV3ForCausalLM"]
+            architectures = ["DeepseekV3ForCausalLM", "DeepseekV3ForCausalLMWithAdditionalHeads"]
         elif not self.text_config.use_mla:
             architectures = ["DeepseekForCausalLM"]
         else:

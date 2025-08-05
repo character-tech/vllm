@@ -317,6 +317,7 @@ def main(args: argparse.Namespace):
         topk = config.num_experts_per_tok
     elif (
         config.architectures[0] == "DeepseekV3ForCausalLM"
+        or config.architectures[0] == "DeepseekV3ForCausalLMWithAdditionalHeads"
         or config.architectures[0] == "DeepseekV2ForCausalLM"
     ):
         E = config.n_routed_experts

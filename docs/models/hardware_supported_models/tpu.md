@@ -22,6 +22,7 @@ title: TPU
 | google/gemma-3-4b-it                                | Gemma3ForConditionalGeneration | ❌ |
 | deepseek-ai/DeepSeek-R1                             | DeepseekV3ForCausalLM          | ❌ |
 | deepseek-ai/DeepSeek-V3                             | DeepseekV3ForCausalLM          | ❌ |
+| deepseek-ai/DeepSeek-V3                             | DeepseekV3ForCausalLMWithAdditionalHeads | ❌ |
 | RedHatAI/Meta-Llama-3.1-8B-Instruct-quantized.w8a8  | LlamaForCausalLM               | ✅ |
 | RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w8a8 | LlamaForCausalLM               | ✅ |
 | Qwen/Qwen3-8B                                       | Qwen3ForCausalLM               | ✅ |

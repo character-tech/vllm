@@ -22,7 +22,7 @@ class EAGLEConfig(PretrainedConfig):
         model_config: Union[PretrainedConfig, DeepseekV2Config, None]
         if isinstance(model, dict):
             archs = model.get("architectures", [])
-            target_archs = ["DeepseekV2ForCausalLM", "DeepseekV3ForCausalLM"]
+            target_archs = ["DeepseekV2ForCausalLM", "DeepseekV3ForCausalLM", "DeepseekV3ForCausalLMWithAdditionalHeads"]
             if any(target_arch in archs for target_arch in target_archs):
                 # AutoConfig does not support DeepSeek MoE models yet
                 model_config = DeepseekV2Config(**model)
