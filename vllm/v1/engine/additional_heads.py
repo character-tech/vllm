@@ -18,7 +18,7 @@ class AdditionalHeadsProcessor:
     """
 
     # Additional head outputs for this request
-    additional_head_outputs: list[Union[list[float], dict[str, float]]]
+    additional_head_outputs: list[list[Union[float, list[float]]]]
 
     @classmethod
     def from_new_request(
@@ -39,6 +39,8 @@ class AdditionalHeadsProcessor:
             output: The engine core output containing new additional 
                 head outputs.
         """
+        new_additional_head_outputs = output.new_additional_head_outputs
         if output.new_additional_head_outputs is not None:
+            logger.info(f"adding head output, {len(new_additional_head_outputs)} {len(new_additional_head_outputs[0][0])}")
             self.additional_head_outputs.append(
                 output.new_additional_head_outputs.additional_head_outputs)

@@ -9,8 +9,7 @@ import torch
 
 class AdditionalHeadOutputsPerRequest(NamedTuple):
     # num_additional_head_outputs
-    additional_head_outputs: Union[list[float], list[list[float]]]
-
+    additional_head_outputs: list[Union[float, list[float]]]
 
 class AdditionalHeadOutputs(NamedTuple):
     # num_generated_tokens x num_additional_head_outputs
